@@ -1,4 +1,4 @@
-name: Manual Salesforce Manifest Deployment
+name: STAGING - Manual Salesforce Manifest Deployment
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ on:
 jobs:
   deploy_salesforce_project:
     runs-on: ubuntu-latest
-    environment: Production # Or Staging, etc., if you use GitHub Environments for stricter control
+    environment: STAGING # Or Staging, etc., if you use GitHub Environments for stricter control
 
     steps:
       - name: Checkout repository
