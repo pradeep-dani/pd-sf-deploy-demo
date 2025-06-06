@@ -1,0 +1,88 @@
+name: Salesforce PR Validation
+
+on:  
+  pull_request:
+    branches:
+      #- 'main'
+      - 'releases/**'
+
+
+jobs:
+  validate-deployment:
+    name: Validate Deployment to Salesforce
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Salesforce CLI (sf)
+        run: |
+          npm install --global @salesforce/cli
+
+      - name: Write JWT key to file
+        run: |
+          echo "${{ secrets.SFDX_JWT_KEY }}" > server.key
+
+      - name: Authenticate with Salesforce using JWT
+        run: |
+          sf org login jwt \
+            --client-id ${{ secrets.SFDX_CLIENT_ID }} \
+            --jwt-key-file server.key \
+            --username ${{ secrets.SFDX_USERNAME }} \
+            --instance-url ${{ secrets.SFDX_INSTANCE_URL }} \
+            --alias pd-dev-org \
+            --set-default
+
+      - name: Validate deployment using manifest
+        run: |
+          sf project deploy validate \
+            --manifest manifest/package.xml \
+            --target-org pd-dev-org \
+            --verbose
+            --wait 10
+      - name: Post failure comment
+        if: failure()  # This runs only if previous steps failed
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            ❌ **Salesforce Validation Failed** ❌
+            Please check the deployment logs and fix the issues before merging.
+
+  code-analysis:
+    name: Run Code Analyzer
+    runs-on: ubuntu-latest
+    #needs: validate-deployment
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Install Code Analyzer Plugin v5.x
+        run: sf plugins install @salesforce/plugin-code-analyzer
+
+      - name: Run Code Analysis
+        run: |
+          sf code-analyzer run --target ./force-app/**/*.* --severity-threshold 2 --rule-selector Recommended --view table --output-file code-analysis-report.csv
+
+      - name: Upload Code Analysis Report
+        if: failure()  
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-analysis-report
+          path: code-analysis-report.csv
+
+      - name: Comment with Artifact Download Link
+        if: failure()  
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🔍 Code analysis completed. Download the CSV report from the workflow artifacts.`
+            })
