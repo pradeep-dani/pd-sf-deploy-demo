@@ -1,28 +1,72 @@
-name: Salesforce PR Validation
+name: Manual Salesforce Manifest Deployment
 
-on:  
-  pull_request:
-    branches:
-      #- 'main'
-      - 'releases/**'
-
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: 'The branch to checkout and deploy from (e.g., releases/v1.0.0, feature/my-new-feature)'
+        required: true
+        default: 'main' # Or your default development branch
+      target_org_alias:
+        description: 'Salesforce target org alias for deployment'
+        required: true
+        default: 'pd-dev-deploy-org' # Your default deployment org alias
+      deploy_manifest_path:
+        description: 'Path to the manifest file (e.g., manifest/package.xml)'
+        required: true
+        default: 'manifest/package.xml'
+      wait_minutes:
+        description: 'Wait time in minutes for deployment (e.g., 10, 30)'
+        required: false
+        default: '1'
+        type: number
 
 jobs:
-  validate-deployment:
-    name: Validate Deployment to Salesforce
+  deploy_salesforce_project:
     runs-on: ubuntu-latest
+    environment: Production # Or Staging, etc., if you use GitHub Environments for stricter control
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch_name }} # Checkout the specified branch
 
-      - name: Install Salesforce CLI (sf)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Recommended Node.js version for sf CLI
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Cache Salesforce CLI (npm modules and binaries)
+        uses: actions/cache@v4
+        id: cache-sf-cli
+        with:
+          path: |
+            ${{ steps.npm-cache-dir.outputs.dir }}
+            ~/.local/share/sf # Common install location for sf CLI
+            ~/.npm
+          key: ${{ runner.os }}-sf-cli-${{ hashFiles('**/package-lock.json', '.github/workflows/manual-salesforce-manifest-deployment.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-sf-cli-
+
+      - name: Install Salesforce CLI
+        if: steps.cache-sf-cli.outputs.cache-hit != 'true'
+        run: npm install @salesforce/cli --global
+
+      - name: Add sf CLI to PATH
         run: |
-          npm install --global @salesforce/cli
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+          echo "~/.local/share/sf/bin" >> $GITHUB_PATH # Ensure this path is added
+          sf --version # Verify installation and path
 
-      - name: Write JWT key to file
+      - name: Create JWT private key file
         run: |
           echo "${{ secrets.SFDX_JWT_KEY }}" > server.key
+          chmod 600 server.key # Set restrictive permissions for security
 
       - name: Authenticate with Salesforce using JWT
         run: |
@@ -31,58 +75,21 @@ jobs:
             --jwt-key-file server.key \
             --username ${{ secrets.SFDX_USERNAME }} \
             --instance-url ${{ secrets.SFDX_INSTANCE_URL }} \
-            --alias pd-dev-org \
-            --set-default
+            --alias ${{ github.event.inputs.target_org_alias }} \
+            --set-default-dev-hub # Optional, if this is your Dev Hub for scratch orgs
+        env:
+          # You can optionally define secrets as environment variables here as well
+          # SF_LOG_LEVEL: debug # For more verbose sf CLI output during auth
+          SF_AUTOUPDATE_DISABLE: 'true' # Prevent sf CLI from trying to self-update during workflow
 
-      - name: Validate deployment using manifest
+      - name: Deploy Salesforce project using manifest
         run: |
-          sf project deploy validate \
-            --manifest manifest/package.xml \
-            --target-org pd-dev-org \
-            --verbose
-            --wait 10
-      - name: Post failure comment
-        if: failure()  # This runs only if previous steps failed
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          message: |
-            ❌ **Salesforce Validation Failed** ❌
-            Please check the deployment logs and fix the issues before merging.
+          sf project deploy start \
+            --manifest ${{ github.event.inputs.deploy_manifest_path }} \
+            --target-org ${{ github.event.inputs.target_org_alias }} \
+            --verbose \
+            --wait ${{ github.event.inputs.wait_minutes }}
 
-  code-analysis:
-    name: Run Code Analyzer
-    runs-on: ubuntu-latest
-    #needs: validate-deployment
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install Salesforce CLI
-        run: npm install --global @salesforce/cli
-
-      - name: Install Code Analyzer Plugin v5.x
-        run: sf plugins install @salesforce/plugin-code-analyzer
-
-      - name: Run Code Analysis
-        run: |
-          sf code-analyzer run --target ./force-app/**/*.* --severity-threshold 2 --rule-selector Recommended --view table --output-file code-analysis-report.csv
-
-      - name: Upload Code Analysis Report
-        if: failure()  
-        uses: actions/upload-artifact@v4
-        with:
-          name: code-analysis-report
-          path: code-analysis-report.csv
-
-      - name: Comment with Artifact Download Link
-        if: failure()  
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🔍 Code analysis completed. Download the CSV report from the workflow artifacts.`
-            })
+      - name: Clean up private key file
+        run: rm server.key
+        if: always() # Ensure this runs even if previous steps fail for security
