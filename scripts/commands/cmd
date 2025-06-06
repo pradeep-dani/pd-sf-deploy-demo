@@ -1,0 +1,4 @@
+git remote set-url origin https://github.com/pradeep-dani/pd-sf-deploy-demo.git
+
+git config user.name "Pradeep Dani"
+git config user.email "pradeep.jdani@gmail.com"
