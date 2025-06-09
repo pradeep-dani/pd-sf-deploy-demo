@@ -108,5 +108,11 @@ jobs:
           fi
 
       - name: Clean up private key file
-        run: rm server.key
-        if: always() # Ensure this runs even if previous steps fail for security
+        run: |
+          if [ -f server.key ]; then
+            rm server.key # Ensure this runs even if previous steps fail for security
+            echo "🔐 server.key removed"
+          else
+            echo "ℹ️ server.key not found, skipping"
+          fi
+ 
