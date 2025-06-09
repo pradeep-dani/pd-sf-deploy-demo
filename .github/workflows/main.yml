@@ -38,9 +38,10 @@ jobs:
         id: parse
         run: |
           content=$(cat .github/config/input.json)
-          echo "manifest=$(echo $content | jq -r '.STAGING.manifest')" >> $GITHUB_OUTPUT
-          echo "test_classes=$(echo $content | jq -r '.STAGING.test_classes')" >> $GITHUB_OUTPUT
-          echo "is_validate=$(echo $content | jq -r '.STAGING.is_validate')" >> $GITHUB_OUTPUT
+          env_key="${{ github.event.inputs.environment }}"
+          echo "manifest=$(echo "$content" | jq -r --arg env "$env_key" '.[$env].manifest')" >> $GITHUB_OUTPUT
+          echo "test_classes=$(echo "$content" | jq -r --arg env "$env_key" '.[$env].test_classes')" >> $GITHUB_OUTPUT
+          echo "is_validate=$(echo "$content" | jq -r --arg env "$env_key" '.[$env].is_validate')" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
