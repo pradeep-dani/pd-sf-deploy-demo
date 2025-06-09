@@ -7,19 +7,14 @@ on:
         description: 'The branch to checkout and deploy from (e.g., releases/v1.0.0, feature/my-new-feature)'
         required: true
         default: 'main' # Or your default development branch
-      target_org_alias:
-        description: 'Salesforce target org alias for deployment'
-        required: true
-        default: 'pd-dev-deploy-org' # Your default deployment org alias
-      deploy_manifest_path:
-        description: 'Path to the manifest file (e.g., manifest/package.xml)'
-        required: true
-        default: 'manifest/package.xml'
-      wait_minutes:
-        description: 'Wait time in minutes for deployment (e.g., 10, 30)'
-        required: false
-        default: '1'
-        type: number
+      # environment:
+      #   description: 'Select the deployment environment'
+      #   required: true
+      #   type: choice
+      #   options:
+      #   - STAGING
+      #   - FULL
+      #   - PROD
 
 jobs:
   deploy_salesforce_project:
@@ -31,6 +26,20 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch_name }} # Checkout the specified branch
+      
+      - name: Read JSON file
+        id: read_json
+        run: |
+          content=$(cat .github/config/input.json)
+          echo "JSON_CONTENT=$content" >> $GITHUB_ENV
+  	  
+      - name: Parse JSON and set variables
+        id: parse
+        run: |
+            echo "environment=$(echo $JSON_CONTENT | jq -r '.environment')" >> $GITHUB_OUTPUT
+            echo "manifest=$(echo $JSON_CONTENT | jq -r '.manifest')" >> $GITHUB_OUTPUT
+            echo "test_classes=$(echo $JSON_CONTENT | jq -r '.test_classes')" >> $GITHUB_OUTPUT
+            echo "is_validate=$(echo $JSON_CONTENT | jq -r '.is_validate')" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -75,8 +84,7 @@ jobs:
             --jwt-key-file server.key \
             --username ${{ secrets.SFDX_USERNAME }} \
             --instance-url ${{ secrets.SFDX_INSTANCE_URL }} \
-            --alias ${{ github.event.inputs.target_org_alias }} \
-            --set-default-dev-hub # Optional, if this is your Dev Hub for scratch orgs
+            --alias env-${{ steps.parse.outputs.environment  }} 
         env:
           # You can optionally define secrets as environment variables here as well
           # SF_LOG_LEVEL: debug # For more verbose sf CLI output during auth
@@ -85,10 +93,10 @@ jobs:
       - name: Deploy Salesforce project using manifest
         run: |
           sf project deploy start \
-            --manifest ${{ github.event.inputs.deploy_manifest_path }} \
-            --target-org ${{ github.event.inputs.target_org_alias }} \
-            --verbose \
-            --wait ${{ github.event.inputs.wait_minutes }}
+            --manifest ${{ steps.parse.outputs.manifest }} \
+            --target-org env-${{ steps.parse.outputs.environment }} \
+            --test-level RunSpecifiedTests ${{ steps.parse.outputs.test_classes }} \
+            --verbose 
 
       - name: Clean up private key file
         run: rm server.key

@@ -1,0 +1,7 @@
+{
+    "branch_name":"main",
+    "environment":"STAGING",
+    "manifest":"manifest/release-v1/package-v1.xml",
+    "test_classes":"--tests PD_Utility_Test",
+    "is_validate": false
+}
