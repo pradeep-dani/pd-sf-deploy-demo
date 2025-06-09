@@ -2,11 +2,7 @@ name: STAGING - Manual Salesforce Manifest Deployment
 
 on:
   workflow_dispatch:
-    inputs:
-      branch_name:
-        description: 'The branch to checkout and deploy from (e.g., releases/v1.0.0, feature/my-new-feature)'
-        required: true
-        default: 'main' # Or your default development branch
+
 
 jobs:
   deploy_salesforce_project:
@@ -17,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch_name }} # Checkout the specified branch
+          ref: ${{ github.ref }} # Checkout the specified branch
       
       - name: Read and parse JSON
         id: parse
