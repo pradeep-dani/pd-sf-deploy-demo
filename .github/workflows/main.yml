@@ -7,14 +7,6 @@ on:
         description: 'The branch to checkout and deploy from (e.g., releases/v1.0.0, feature/my-new-feature)'
         required: true
         default: 'main' # Or your default development branch
-      # environment:
-      #   description: 'Select the deployment environment'
-      #   required: true
-      #   type: choice
-      #   options:
-      #   - STAGING
-      #   - FULL
-      #   - PROD
 
 jobs:
   deploy_salesforce_project:
