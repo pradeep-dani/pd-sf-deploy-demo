@@ -5,7 +5,7 @@ on:
 
 
 jobs:
-  deploy_salesforce_project:
+  deploy_to_staging:
     runs-on: ubuntu-latest
     environment: STAGING # Or Staging, etc., if you use GitHub Environments for stricter control
 
