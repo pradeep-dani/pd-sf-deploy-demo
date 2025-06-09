@@ -19,19 +19,15 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch_name }} # Checkout the specified branch
       
-      - name: Read JSON file
-        id: read_json
-        run: |
-          content=$(cat .github/config/input.json)
-          echo "JSON_CONTENT=$content" >> $GITHUB_ENV
-  	  
-      - name: Parse JSON and set variables
+      
+      - name: Read and parse JSON
         id: parse
         run: |
-            echo "environment=$(echo $JSON_CONTENT | jq -r '.environment')" >> $GITHUB_OUTPUT
-            echo "manifest=$(echo $JSON_CONTENT | jq -r '.manifest')" >> $GITHUB_OUTPUT
-            echo "test_classes=$(echo $JSON_CONTENT | jq -r '.test_classes')" >> $GITHUB_OUTPUT
-            echo "is_validate=$(echo $JSON_CONTENT | jq -r '.is_validate')" >> $GITHUB_OUTPUT
+          content=$(cat .github/config/input.json)
+          echo "environment=$(echo $content | jq -r '.environment')" >> $GITHUB_OUTPUT
+          echo "manifest=$(echo $content | jq -r '.manifest')" >> $GITHUB_OUTPUT
+          echo "test_classes=$(echo $content | jq -r '.test_classes')" >> $GITHUB_OUTPUT
+          echo "is_validate=$(echo $content | jq -r '.is_validate')" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
