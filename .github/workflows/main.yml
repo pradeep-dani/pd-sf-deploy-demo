@@ -19,10 +19,10 @@ jobs:
         id: parse
         run: |
           content=$(cat .github/config/input.json)
-          echo "environment=$(echo $content | jq -r '.environment')" >> $GITHUB_OUTPUT
-          echo "manifest=$(echo $content | jq -r '.manifest')" >> $GITHUB_OUTPUT
-          echo "test_classes=$(echo $content | jq -r '.test_classes')" >> $GITHUB_OUTPUT
-          echo "is_validate=$(echo $content | jq -r '.is_validate')" >> $GITHUB_OUTPUT
+          echo "environment=$(echo $content | jq -r '.STAGING.environment')" >> $GITHUB_OUTPUT
+          echo "manifest=$(echo $content | jq -r '.STAGING.manifest')" >> $GITHUB_OUTPUT
+          echo "test_classes=$(echo $content | jq -r '.STAGING.test_classes')" >> $GITHUB_OUTPUT
+          echo "is_validate=$(echo $content | jq -r '.STAGING.is_validate')" >> $GITHUB_OUTPUT
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -75,11 +75,19 @@ jobs:
 
       - name: Deploy Salesforce project using manifest
         run: |
-          sf project deploy start \
-            --manifest ${{ steps.parse.outputs.manifest }} \
-            --target-org env-${{ steps.parse.outputs.environment }} \
-            --test-level RunSpecifiedTests ${{ steps.parse.outputs.test_classes }} \
-            --verbose 
+          if [ "${{ steps.parse.outputs.is_validate }}" = "true" ]; then            
+            sf project deploy validate \
+              --manifest ${{ steps.parse.outputs.manifest }} \
+              --target-org env-${{ steps.parse.outputs.environment }} \
+              --test-level RunSpecifiedTests ${{ steps.parse.outputs.test_classes }} \
+              --verbose 
+          else
+            sf project deploy start \
+              --manifest ${{ steps.parse.outputs.manifest }} \
+              --target-org env-${{ steps.parse.outputs.environment }} \
+              --test-level RunSpecifiedTests ${{ steps.parse.outputs.test_classes }} \
+              --verbose 
+          fi
 
       - name: Clean up private key file
         run: rm server.key
