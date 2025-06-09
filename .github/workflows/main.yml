@@ -2,14 +2,15 @@ name: Salesforce Manifest Deployment
 
 on:
   workflow_dispatch:
-    environment:
-      description: 'Deployment Environment'
-      required: true
-      type: choice
-      options:
-        - STAGING
-        - FULL
-        - PROD
+    inputs:
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        type: choice
+        options:
+          - STAGING
+          - FULL
+          - PROD
 
 jobs:
   DEPLOY_PROCESS:
