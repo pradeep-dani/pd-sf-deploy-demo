@@ -19,7 +19,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch_name }} # Checkout the specified branch
       
-      
       - name: Read and parse JSON
         id: parse
         run: |
@@ -46,7 +45,7 @@ jobs:
             ${{ steps.npm-cache-dir.outputs.dir }}
             ~/.local/share/sf # Common install location for sf CLI
             ~/.npm
-          key: ${{ runner.os }}-sf-cli-${{ hashFiles('**/package-lock.json', '.github/workflows/manual-salesforce-manifest-deployment.yml') }}
+          key: ${{ runner.os }}-sf-cli-${{ hashFiles('**/package-lock.json', '.github/workflows/main.yml') }}
           restore-keys: |
             ${{ runner.os }}-sf-cli-
 
