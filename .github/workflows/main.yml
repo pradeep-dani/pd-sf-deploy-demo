@@ -1,15 +1,33 @@
-name: STAGING - Manual Salesforce Manifest Deployment
+name: Salesforce Manifest Deployment
 
 on:
   workflow_dispatch:
-
+    environment:
+      description: 'Deployment Environment'
+      required: true
+      type: choice
+      options:
+        - STAGING
+        - FULL
+        - PROD
 
 jobs:
-  STAGING_PROCESS:
+  DEPLOY_PROCESS:
     runs-on: ubuntu-latest
-    environment: STAGING # Or Staging, etc., if you use GitHub Environments for stricter control
+    environment: ${{ github.event.inputs.environment }} # Or Staging, etc., if you use GitHub Environments for stricter control
 
     steps:
+      - name: Check user permissions
+        id: check_user
+        run: |
+          echo "Triggered by: ${{ github.actor }}"
+          if [[ "${{ github.event.inputs.environment }}" != "STAGING" ]]; then
+            if [[ "${{ github.actor }}" != "pradeep-dani1" && "${{ github.actor }}" != "pradeep-dani2" ]]; then
+              echo "❌ Unauthorized to deploy to ${{ github.event.inputs.environment }}"
+              exit 1
+            fi
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -19,7 +37,6 @@ jobs:
         id: parse
         run: |
           content=$(cat .github/config/input.json)
-          echo "environment=$(echo $content | jq -r '.STAGING.environment')" >> $GITHUB_OUTPUT
           echo "manifest=$(echo $content | jq -r '.STAGING.manifest')" >> $GITHUB_OUTPUT
           echo "test_classes=$(echo $content | jq -r '.STAGING.test_classes')" >> $GITHUB_OUTPUT
           echo "is_validate=$(echo $content | jq -r '.STAGING.is_validate')" >> $GITHUB_OUTPUT
@@ -67,7 +84,7 @@ jobs:
             --jwt-key-file server.key \
             --username ${{ secrets.SFDX_USERNAME }} \
             --instance-url ${{ secrets.SFDX_INSTANCE_URL }} \
-            --alias env-${{ steps.parse.outputs.environment  }} 
+            --alias env-${{ github.event.inputs.environment  }} 
         env:
           # You can optionally define secrets as environment variables here as well
           # SF_LOG_LEVEL: debug # For more verbose sf CLI output during auth
@@ -78,13 +95,13 @@ jobs:
           if [ "${{ steps.parse.outputs.is_validate }}" = "true" ]; then            
             sf project deploy validate \
               --manifest ${{ steps.parse.outputs.manifest }} \
-              --target-org env-${{ steps.parse.outputs.environment }} \
+              --target-org env-${{ github.event.inputs.environment }} \
               --test-level RunSpecifiedTests ${{ steps.parse.outputs.test_classes }} \
               --verbose 
           else
             sf project deploy start \
               --manifest ${{ steps.parse.outputs.manifest }} \
-              --target-org env-${{ steps.parse.outputs.environment }} \
+              --target-org env-${{ github.event.inputs.environment }} \
               --test-level RunSpecifiedTests ${{ steps.parse.outputs.test_classes }} \
               --verbose 
           fi

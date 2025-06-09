@@ -1,7 +1,15 @@
 {
     "STAGING":{
-        "environment":"STAGING",
-        "branch_name":"main",
+        "manifest":"manifest/release-v1/package-v1.xml",
+        "test_classes":"--tests PD_Utility_Test",
+        "is_validate": true
+    },
+    "FULL":{
+        "manifest":"manifest/release-v1/package-v1.xml",
+        "test_classes":"--tests PD_Utility_Test",
+        "is_validate": true
+    },
+    "PROD":{
         "manifest":"manifest/release-v1/package-v1.xml",
         "test_classes":"--tests PD_Utility_Test",
         "is_validate": true
