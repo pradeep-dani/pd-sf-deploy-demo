@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Deployment Environment'
+        description: 'Deployment Environment (please populate respective values in .github/workflows/input.json)'
         required: true
         type: choice
         options:
@@ -57,12 +57,12 @@ jobs:
         if: steps.cache-sf-cli.outputs.cache-hit != 'true'
         run: 
           npm install @salesforce/cli --global
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
           which sf
           sf --version
 
-      - name: Add sf CLI to PATH
+      - name: verify sf CLI to PATH
         run: |
-          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
           which sf || echo "sf not found"
 
       - name: Create JWT private key file
