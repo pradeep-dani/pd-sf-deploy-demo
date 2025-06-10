@@ -55,19 +55,15 @@ jobs:
 
       - name: Install Salesforce CLI
         if: steps.cache-sf-cli.outputs.cache-hit != 'true'
-        run: npm install @salesforce/cli --global
-
-      - name: Fix permissions
         run: 
-          chmod +x ~/.local/share/sf/bin/sf
+          npm install @salesforce/cli --global
+          which sf
+          sf --version
 
       - name: Add sf CLI to PATH
         run: |
           echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
-          echo "$HOME/.local/share/sf/bin" >> $GITHUB_PATH
-          ls -l ~/.local/share/sf/bin # Check if sf exists and is executable
-          which sf || echo "sf not found in PATH"
-          sf --version
+          which sf || echo "sf not found"
 
       - name: Create JWT private key file
         run: |
