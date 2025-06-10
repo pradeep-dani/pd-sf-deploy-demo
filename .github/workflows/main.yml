@@ -62,9 +62,12 @@ jobs:
           echo "$(npm config get prefix)/bin"
           echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
 
-      - name: verify sf CLI to PATH
+      - name: Add sf to PATH
         run: |
+          echo "$(npm config get prefix)/bin"
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
           which sf || echo "sf not found"
+
 
       - name: Create JWT private key file
         run: |
