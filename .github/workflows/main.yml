@@ -57,9 +57,10 @@ jobs:
         if: steps.cache-sf-cli.outputs.cache-hit != 'true'
         run: 
           npm install @salesforce/cli --global
-          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
           which sf
           sf --version
+          echo "$(npm config get prefix)/bin"
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
 
       - name: verify sf CLI to PATH
         run: |
