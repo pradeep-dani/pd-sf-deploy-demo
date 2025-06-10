@@ -45,28 +45,15 @@ jobs:
         uses: actions/cache@v4
         id: cache-sf-cli
         with:
-          path: |
-            ${{ steps.npm-cache-dir.outputs.dir }}
-            ~/.local/share/sf # Common install location for sf CLI
-            ~/.npm
-          key: ${{ runner.os }}-sf-cli-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-sf-cli-
+            ${{ runner.os }}-npm-
 
-      - name: Install Salesforce CLI
-        if: steps.cache-sf-cli.outputs.cache-hit != 'true'
+      - name: Install Salesforce CLI (always)
         run: |
-          npm install @salesforce/cli --global
-          which sf
-          sf --version
-          echo "$(npm config get prefix)/bin"
+          npm install --global @salesforce/cli
           echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
-
-      - name: Add sf to PATH
-        run: |
-          echo "$(npm config get prefix)/bin"
-          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
-          which sf || echo "sf not found"
 
       - name: Create JWT private key file
         run: |
