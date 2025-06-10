@@ -55,7 +55,7 @@ jobs:
 
       - name: Install Salesforce CLI
         if: steps.cache-sf-cli.outputs.cache-hit != 'true'
-        run: 
+        run: |
           npm install @salesforce/cli --global
           which sf
           sf --version
