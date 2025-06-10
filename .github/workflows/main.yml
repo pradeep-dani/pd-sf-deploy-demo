@@ -18,17 +18,6 @@ jobs:
     environment: ${{ github.event.inputs.environment }} # Or Staging, etc., if you use GitHub Environments for stricter control
 
     steps:
-      - name: Check user permissions
-        id: check_user
-        run: |
-          echo "Triggered by: ${{ github.actor }}"
-          if [[ "${{ github.event.inputs.environment }}" != "STAGING" ]]; then
-            if [[ "${{ github.actor }}" != "pradeep-dani1" && "${{ github.actor }}" != "pradeep-dani2" ]]; then
-              echo "❌ Unauthorized to deploy to ${{ github.event.inputs.environment }}"
-              exit 1
-            fi
-          fi
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -60,7 +49,7 @@ jobs:
             ${{ steps.npm-cache-dir.outputs.dir }}
             ~/.local/share/sf # Common install location for sf CLI
             ~/.npm
-          key: ${{ runner.os }}-sf-cli-${{ hashFiles('**/package-lock.json', '.github/workflows/main.yml') }}
+          key: ${{ runner.os }}-sf-cli-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-sf-cli-
 
@@ -68,11 +57,17 @@ jobs:
         if: steps.cache-sf-cli.outputs.cache-hit != 'true'
         run: npm install @salesforce/cli --global
 
+      - name: Fix permissions
+        run: 
+          chmod +x ~/.local/share/sf/bin/sf
+
       - name: Add sf CLI to PATH
         run: |
           echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
-          echo "~/.local/share/sf/bin" >> $GITHUB_PATH # Ensure this path is added
-          sf --version # Verify installation and path
+          echo "$HOME/.local/share/sf/bin" >> $GITHUB_PATH
+          ls -l ~/.local/share/sf/bin # Check if sf exists and is executable
+          which sf || echo "sf not found in PATH"
+          sf --version
 
       - name: Create JWT private key file
         run: |
