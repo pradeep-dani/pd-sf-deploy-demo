@@ -1,6 +1,7 @@
 name: Salesforce Refresh Process
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '30 6 * * *'   # 12 PM IST - 6:30 UTC
     - cron: '30 10 * * *'  # 4 PM IST
