@@ -1,0 +1,83 @@
+name: Salesforce Refresh Process
+
+on:
+  schedule:
+    - cron: '30 6 * * *'   # 12 PM IST - 6:30 UTC
+    - cron: '30 10 * * *'  # 4 PM IST
+    - cron: '30 14 * * *'  # 8 PM IST
+    - cron: '30 18 * * *'  # 12 AM IST
+
+jobs:
+  DEPLOY_PROCESS:
+    runs-on: ubuntu-latest
+    environment: STAGING # Or Staging, etc., if you use GitHub Environments for stricter control
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main # Checkout the specified branch
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Recommended Node.js version for sf CLI
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Cache Salesforce CLI (npm modules and binaries)
+        uses: actions/cache@v4
+        id: cache-sf-cli
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install Salesforce CLI (always)
+        run: |
+          npm install --global @salesforce/cli
+          echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+
+      - name: Create JWT private key file
+        run: |
+          echo "${{ secrets.SFDX_JWT_KEY }}" > server.key
+          chmod 600 server.key # Set restrictive permissions for security
+
+      - name: Authenticate with Salesforce using JWT
+        run: |
+          sf org login jwt \
+            --client-id ${{ secrets.SFDX_CLIENT_ID }} \
+            --jwt-key-file server.key \
+            --username ${{ secrets.SFDX_USERNAME }} \
+            --instance-url ${{ secrets.SFDX_INSTANCE_URL }} \
+            --alias env-STAGING
+        env:
+          # You can optionally define secrets as environment variables here as well
+          # SF_LOG_LEVEL: debug # For more verbose sf CLI output during auth
+          SF_AUTOUPDATE_DISABLE: 'true' # Prevent sf CLI from trying to self-update during workflow
+
+      - name: Retrieve Salesforce project using manifest
+        run: |
+          sf project retrieve start \
+              --manifest manifest\package.xml \
+              --target-org env-STAGING
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "SF Retrieve: $(date '+%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+          git push origin HEAD:main
+
+      - name: Clean up private key file
+        run: |
+          if [ -f server.key ]; then
+            rm server.key # Ensure this runs even if previous steps fail for security
+            echo "🔐 server.key removed"
+          else
+            echo "ℹ️ server.key not found, skipping"
+          fi
+ 
