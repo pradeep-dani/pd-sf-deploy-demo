@@ -62,7 +62,7 @@ jobs:
       - name: Retrieve Salesforce project using manifest
         run: |
           sf project retrieve start \
-              --manifest manifest\package.xml \
+              --manifest manifest/package.xml \
               --target-org env-STAGING
       - name: Commit and push changes
         run: |
