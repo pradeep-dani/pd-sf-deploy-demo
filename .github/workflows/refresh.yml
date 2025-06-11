@@ -12,7 +12,7 @@ permissions:
   contents: write  
 
 jobs:
-  DEPLOY_PROCESS:
+  RETRIEVE_PROCESS:
     runs-on: ubuntu-latest
     environment: STAGING # Or Staging, etc., if you use GitHub Environments for stricter control
 
